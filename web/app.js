@@ -1,6 +1,6 @@
 'use strict';
 const $ = id => document.getElementById(id);
-let mode = 'upload', selectedDrive = null, currentJob = null, pollTimer = null, galleryRows = [], folderPage = null, currentFolder = null, historyOffset = 0, busy = false;
+let mode = 'upload', selectedDrive = null, currentJob = null, pollTimer = null, galleryRows = [], gallerySimilarity = null, folderPage = null, currentFolder = null, historyOffset = 0, busy = false;
 const show = (id, visible = true) => $(id).hidden = !visible;
 function notice(message) { $('notice').textContent = message; show('notice', !!message); }
 function element(tag, text, className) { const e = document.createElement(tag); if (text !== undefined) e.textContent = text; if (className) e.className = className; return e; }
@@ -126,7 +126,22 @@ async function detail(id) {
     const gallery = job.result.assets.find(a => a.name === 'gallery.json');
     if (gallery) {
       const response = await fetch(assetUrl(job, gallery)); if (!response.ok) throw new Error('Could not load the gallery.');
-      const data = await response.json(); galleryRows = data.tracks; show('gallery-tools'); renderGallery();
+      const data = await response.json(); galleryRows = data.tracks; gallerySimilarity = data.similarity || null;
+      // Earlier jobs store groups in a separate Drive artifact.
+      if (!gallerySimilarity) {
+        const similarityAsset = job.result.assets.find(a => a.name === 'similarity.json');
+        if (similarityAsset) {
+          try {
+            const groupsResponse = await fetch(assetUrl(job, similarityAsset));
+            if (groupsResponse.ok) gallerySimilarity = await groupsResponse.json();
+          } catch (_) { /* Chronological review stays available. */ }
+        }
+      }
+      const ready = gallerySimilarity?.status === 'ready';
+      $('gallery-order').querySelector('[value="similarity"]').disabled = !ready;
+      if (!ready) $('gallery-order').value = 'chronological';
+      $('similarity-message').textContent = ready ? 'Groups reflect appearance, not species or unique individuals.' : (gallerySimilarity?.message || 'Similarity groups are unavailable for this job. Process with the DINOv2 model configured to enable grouping.');
+      show('gallery-tools'); renderGallery();
     }
   }
   if (['queued', 'running'].includes(job.state)) pollTimer = setTimeout(() => detail(id).catch(e => { notice(e.message); pollTimer = setTimeout(() => detail(id).catch(e => notice(e.message)), 15000); }), 6000);
@@ -134,15 +149,26 @@ async function detail(id) {
 function renderGallery() {
   $('gallery').replaceChildren(); const search = $('gallery-search').value.toLowerCase();
   const rows = galleryRows.filter(row => `${row.track_id} ${row.species_id} ${row.scientific_name}`.toLowerCase().includes(search));
-  for (const row of rows) {
+  const sections = OpenfishGallery.sections(rows, gallerySimilarity, $('gallery-order').value);
+  for (const section of sections) {
+    const container = section.title ? element('section', undefined, 'appearance-group') : $('gallery');
+    if (section.title) {
+      container.append(element('h3', `${section.title} · ${section.tracks.length} tracks`));
+      $('gallery').append(container);
+    }
+    const grid = section.title ? element('div', undefined, 'gallery') : container;
+    if (section.title) container.append(grid);
+    for (const row of section.tracks) {
     const card = element('article', undefined, 'fish-card'); const crop = currentJob.result.assets.find(a => a.name === row.crop);
     if (crop) { const img = element('img'); img.src = assetUrl(currentJob, crop); img.loading = 'lazy'; img.alt = 'Track ' + row.track_id + ' fish crop'; card.append(img); }
     const body = element('div'); body.append(element('h3', row.scientific_name || row.species_id.replaceAll('_', ' ')), element('p', `Track ${row.track_id} · ${row.first_s}–${row.last_s}s`), element('p', row.status.replaceAll('_', ' ') + (row.confidence == null ? ' · no model score' : ` · score ${Number(row.confidence).toFixed(3)}`)), element('p', row.reason.replaceAll('_', ' ')));
-    card.append(body); $('gallery').append(card);
+    card.append(body); grid.append(card);
+    }
   }
   if (!rows.length) $('gallery').append(element('p', 'No matching tracks.', 'muted'));
 }
 $('gallery-search').oninput = renderGallery;
+$('gallery-order').onchange = renderGallery;
 $('cancel').onclick = async () => { $('cancel').disabled = true; try { await post(`/jobs/${currentJob.id}/cancel`); await detail(currentJob.id); } catch (e) { notice(e.message); } finally { $('cancel').disabled = false; } };
 $('resume-upload').onclick = async () => { if (!pendingUpload) return; $('resume-upload').disabled = true; try { await upload(pendingUpload.url, pendingUpload.file); await post(`/jobs/${pendingUpload.id}/start`); pendingUpload = null; await history(); await detail(currentJob.id); } catch (e) { notice(e.message); } finally { $('resume-upload').disabled = false; } };
 enter().catch(e => { if (!e.message.includes('Sign in')) notice(e.message); });

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.2 — 2026-11-06
+
+- Expanded visual-similarity grouping into the live openfishGPU web gallery, with chronological ordering, group headings, search within groups and an ungrouped section.
+- Supported existing jobs with separate similarity.json artifacts and explained missing model/groups without blocking review.
+- Enabled CUDA inference for the DINOv2 appearance encoder on GPU workers.
+
 ## 0.1.1 — 2026-11-06
 
 - Retained the portable Fish Gallery HTML download with chronological and visual-similarity grouping, track views and species review controls from desktop openfish.

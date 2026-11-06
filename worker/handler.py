@@ -71,6 +71,7 @@ def build_results(out, job_id, versions):
                         'status': prediction['status'], 'confidence': prediction['confidence'],
                         'reason': prediction['reason'], 'crop': f'fish_{ident:04d}.jpg'})
     (out / 'gallery.json').write_text(json.dumps({'tracks': gallery, 'model': predictions['model'],
+        'similarity': {k: similarity[k] for k in ('status', 'groups', 'missing', 'message')},
         'note': 'Provisional track segments, not unique fish. Species scores require review.'}, allow_nan=False))
     run_info = json.loads((out / 'run.json').read_text())
     if not run_info['total_frames'] or run_info['processed_frames'] != run_info['total_frames']:

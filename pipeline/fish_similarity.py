@@ -69,7 +69,8 @@ class DinoEncoder:
         local = Path(__file__).resolve().parent / 'models' / 'dinov2-small'
         model = os.environ.get('OPENFISHID_SIMILARITY_MODEL', str(local) if (local / 'config.json').exists() else MODEL)
         self.processor = AutoImageProcessor.from_pretrained(model, local_files_only=True)
-        self.model = AutoModel.from_pretrained(model, local_files_only=True).eval()
+        self.device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+        self.model = AutoModel.from_pretrained(model, local_files_only=True).to(self.device).eval()
 
     def __call__(self, paths):
         from PIL import Image
@@ -83,7 +84,7 @@ class DinoEncoder:
         if not images:
             raise ValueError('No readable crops')
         with self.torch.inference_mode():
-            inputs = self.processor(images=images, return_tensors='pt')
+            inputs = self.processor(images=images, return_tensors='pt').to(self.device)
             return self.model(**inputs).last_hidden_state[:, 0].cpu().numpy()
 
 

@@ -90,6 +90,9 @@ def test_portable_html_retains_visual_groups(tmp_path, monkeypatch):
     worker.build_results(tmp_path, 'test-job', {})
     similarity = json.loads((tmp_path / 'similarity.json').read_text())
     assert similarity['groups'] == [[1, 2], [3]]
+    web_gallery = json.loads((tmp_path / 'gallery.json').read_text())
+    assert web_gallery['similarity']['groups'] == similarity['groups']
+    assert web_gallery['similarity']['status'] == 'ready'
     page = (tmp_path / 'fish_ID_gallery.html').read_text()
     assert '<option value="similarity">Visual similarity</option>' in page
     assert 'data-group="1"' in page and 'data-group="2"' in page
