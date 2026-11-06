@@ -1,0 +1,9 @@
+requests==2.34.2
+runpod==2.1.0
+ultralytics==8.4.202
+opencv-python==4.11.0.86
+numpy==2.2.6
+scipy==1.15.3
+transformers==5.22.1
+Pillow==11.2.1
+lap==0.5.12
