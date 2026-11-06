@@ -9,6 +9,7 @@
 - Added multi-view track species scoring, threshold/margin abstention, gallery search and CSV/video downloads.
 - Added model checksum verification, explicit model-unavailable results, run manifests and version provenance.
 - Added separate web/worker container recipes, CI tests, deployment/cost/recovery documentation.
+- Configured the test import path explicitly for both console and module invocation in CI.
 - Architectural difference from OpenReefGPU: a single-replica Python API and persistent SQLite index replace the Cloudflare control API; Drive/RunPod boundaries are retained.
 
 Validation status: 19 passing mock-cloud API/worker and species tests, syntax checks, API dependency audit, and a three-frame local CPU detector/encoding smoke; live provider acceptance and GPU model validation remain deployment requirements. This version does not include audio, a pretrained species model, per-user workspaces, automatic deployment, or automatic cleanup.
