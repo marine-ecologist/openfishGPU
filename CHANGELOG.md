@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.1 — 2026-11-06
+
+- Retained the portable Fish Gallery HTML download with chronological and visual-similarity grouping, track views and species review controls from desktop openfish.
+- Saved similarity groups alongside cloud outputs. Configure a local DINOv2 bundle to enable appearance groups; missing models are clearly reported without inventing groups.
+
 ## 0.1.0 — 2026-11-06
 
 - Created the shared openfishGPU video-analysis web workspace.

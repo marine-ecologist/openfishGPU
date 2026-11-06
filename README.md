@@ -2,14 +2,14 @@
 
 A shared web workspace for fish detection, BoT-SORT tracking, track-level species suggestions, and gallery review of underwater video. Videos and durable outputs live in Google Drive; RunPod Serverless runs the CUDA workload.
 
-**Version 0.1.0 · implementation preview.** API lifecycle and species aggregation are tested with mocked cloud services. A live CUDA/Drive deployment must pass the acceptance procedure below before research use. Model weights and cloud credentials are not bundled.
+**Version 0.1.1 · implementation preview.** API lifecycle and species aggregation are tested with mocked cloud services. A live CUDA/Drive deployment must pass the acceptance procedure below before research use. Model weights and cloud credentials are not bundled.
 
 ## Workflow
 
 1. Sign into the shared team workspace.
 2. Upload a video directly to Drive, or browse the configured Drive video library.
 3. Start a RunPod GPU job, follow its status, or request cancellation.
-4. Review the annotated video and searchable track/species gallery. Download detections, tracks, species scores and summaries.
+4. Review the annotated video and searchable track/species gallery. Download **Fish Gallery (HTML)** to retain chronological and visual-similarity grouping. Download detections, tracks, species scores and summaries.
 5. Return to job history to retrieve previous results.
 
 Tracks are provisional segments, **not unique individual fish**. Species suggestions average scores over up to four sampled views per track, apply confidence and margin thresholds, and retain unidentified results when evidence is weak or a classifier is unavailable. Scores are not calibrated accuracy. No trained Caribbean classifier is included.

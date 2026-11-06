@@ -6,6 +6,7 @@ import os
 import re
 import subprocess
 import sys
+import shutil
 import tempfile
 from pathlib import Path
 
@@ -49,8 +50,15 @@ def run(command, job, stage, progress):
 def build_results(out, job_id, versions):
     """Keep raw tracker IDs stable across video, crops, predictions and tables."""
     from species import build_species
+    from fish_gallery import write_gallery
+    from fish_similarity import build_similarity
     tracks = list(csv.DictReader((out / 'tracks.csv').open()))
+    crops = out / 'crops'; crops.mkdir(exist_ok=True)
+    for track in tracks:
+        name = f"fish_{int(track['track_id']):04d}.jpg"
+        if (out / name).exists(): shutil.copyfile(out / name, crops / name)
     predictions = build_species(out, tracks)
+    similarity = build_similarity(out, tracks)
     rows = {r['track_id']: r for r in predictions['tracks']}
     gallery = []
     for track in tracks:
@@ -67,6 +75,7 @@ def build_results(out, job_id, versions):
     run_info = json.loads((out / 'run.json').read_text())
     if not run_info['total_frames'] or run_info['processed_frames'] != run_info['total_frames']:
         raise RuntimeError('Source frame count does not match processed video')
+    write_gallery(out, tracks, run_info, species_result=predictions, similarity_result=similarity)
     (out / 'summary.json').write_text(json.dumps({'jobId': job_id, 'versions': versions,
         'run': run_info, 'speciesModelConfigured': predictions['model'] is not None,
         'trackCount': len(tracks), 'note': 'Track totals are not counts of unique fish.'}, allow_nan=False))
@@ -121,7 +130,7 @@ def handler(job):
         gallery = build_results(out, data['job_id'], data['versions'])
         report(job, 'Saving results to Google Drive', 90)
         names = ['tracked.mp4', 'detections.csv', 'tracks.csv', 'run.json', 'settings.json',
-                 'species_predictions.json', 'species_tracks.csv', 'summary.json', 'gallery.json']
+                 'species_predictions.json', 'species_tracks.csv', 'summary.json', 'gallery.json', 'similarity.json', 'fish_ID_gallery.html']
         names += [r['crop'] for r in gallery if (out / r['crop']).exists()]
         names += [str(p.relative_to(out)) for p in sorted((out / 'similarity_samples').rglob('*.jpg'))]
         assets = []

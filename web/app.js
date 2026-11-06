@@ -119,7 +119,7 @@ async function detail(id) {
   if (job.state === 'uploading' && !pendingUpload) $('detail-stage').textContent = 'Upload was not submitted. To retry after closing this page, create a new analysis; this incomplete job does not incur GPU charges.';
   if (job.result) {
     for (const asset of job.result.assets.filter(a => !a.name.endsWith('.jpg'))) {
-      const link = element('a', asset.name); link.href = assetUrl(job, asset); link.download = asset.name; $('downloads').append(link);
+      const link = element('a', asset.name === 'fish_ID_gallery.html' ? 'Fish Gallery (HTML)' : asset.name); link.href = assetUrl(job, asset); link.download = asset.name; $('downloads').append(link);
     }
     const video = job.result.assets.find(a => a.name === 'tracked.mp4');
     if (video) { $('result-video').src = assetUrl(job, video); show('result-video'); }

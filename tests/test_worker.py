@@ -44,7 +44,7 @@ def test_worker_persists_complete_manifest(tmp_path, monkeypatch):
             out = Path(command[command.index('--output') + 1])
             (out / 'tracks.csv').write_text('track_id,first_s,last_s,detections,best_confidence,review_status\n7,0,1,3,.9,unreviewed\n')
             (out / 'detections.csv').write_text('frame,track_id\n0,7\n')
-            (out / 'run.json').write_text(json.dumps({'processed_frames': 3, 'total_frames': 3}))
+            (out / 'run.json').write_text(json.dumps({'processed_frames': 3, 'total_frames': 3, 'source_fps': 3, 'model': 'test-detector'}))
             (out / 'settings.json').write_text('{}')
             (out / 'fish_0007.jpg').write_bytes(b'crop')
             (out / 'annotated_silent.mp4').write_bytes(b'frames')
@@ -55,6 +55,9 @@ def test_worker_persists_complete_manifest(tmp_path, monkeypatch):
     result = worker.handler({'input': value})
     assert result['state'] == 'completed'
     assert 'manifest.json' in uploads
+    assert 'fish_ID_gallery.html' in uploads
+    assert b'Visual similarity' in uploads['fish_ID_gallery.html']
+    assert 'similarity.json' in uploads
     manifest = json.loads(uploads['manifest.json'])
     assert manifest['jobId'] == value['job_id']
     assert manifest['trackCount'] == 1
@@ -69,3 +72,26 @@ def test_worker_persists_complete_manifest(tmp_path, monkeypatch):
 def test_cpu_worker_fails_before_cloud_access(monkeypatch):
     monkeypatch.setitem(sys.modules, 'torch', types.SimpleNamespace(cuda=types.SimpleNamespace(is_available=lambda: False)))
     with pytest.raises(RuntimeError, match='CUDA'): worker.handler({'input': data()})
+
+
+def test_portable_html_retains_visual_groups(tmp_path, monkeypatch):
+    import numpy as np
+    import fish_similarity
+    monkeypatch.delenv('OPENFISHID_SPECIES_MODEL', raising=False)
+    original = fish_similarity.build_similarity
+    class Encoder:
+        def __call__(self, paths):
+            ident = int(paths[0].stem.split('_')[-1])
+            return np.array([[1., 0.] if ident in (1, 2) else [0., 1.]])
+    monkeypatch.setattr(fish_similarity, 'build_similarity', lambda out, tracks: original(out, tracks, encoder_factory=Encoder))
+    (tmp_path / 'tracks.csv').write_text('track_id,first_s,last_s,detections,best_confidence,review_status\n1,0,1,30,.9,unreviewed\n2,1,2,30,.9,unreviewed\n3,2,3,30,.9,unreviewed\n')
+    (tmp_path / 'run.json').write_text(json.dumps({'processed_frames': 90, 'total_frames': 90, 'source_fps': 30, 'model': 'fixture'}))
+    for ident in (1, 2, 3): (tmp_path / f'fish_{ident:04d}.jpg').write_bytes(b'fixture-crop')
+    worker.build_results(tmp_path, 'test-job', {})
+    similarity = json.loads((tmp_path / 'similarity.json').read_text())
+    assert similarity['groups'] == [[1, 2], [3]]
+    page = (tmp_path / 'fish_ID_gallery.html').read_text()
+    assert '<option value="similarity">Visual similarity</option>' in page
+    assert 'data-group="1"' in page and 'data-group="2"' in page
+    assert 'data:image/jpeg;base64,' in page
+    assert 'Chronological' in page and 'Appearance group' in page
